@@ -1,5 +1,7 @@
 # Send Thing
 
+[![Send Thing — Send things between your devices.](apps/marketing/public/social/send-thing-og.jpg)](https://send-thing.lukestephens.co.za)
+
 Share text, links, photos and files between your devices through group chats.
 A desktop hosts each group; other devices connect over your local network or
 Tailscale. The host must stay awake and reachable.
