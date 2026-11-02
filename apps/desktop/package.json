@@ -61,6 +61,7 @@
       ]
     },
     "linux": {
+      "executableName": "send-thing",
       "icon": "assets/icon.png",
       "artifactName": "send-thing-linux-${arch}.${ext}",
       "category": "Utility",

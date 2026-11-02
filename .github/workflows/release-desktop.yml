@@ -43,7 +43,11 @@ jobs:
       - run: pnpm build:desktop
       - name: Package Linux
         if: matrix.platform == 'linux'
-        run: pnpm --filter @send-thing/desktop exec electron-builder --linux AppImage --${{ matrix.arch }} --publish never
+        run: >-
+          pnpm --filter @send-thing/desktop exec electron-builder
+          --linux AppImage --${{ matrix.arch }} --publish never
+          --config.linux.executableName=send-thing
+          --config.linux.artifactName=send-thing-linux-${{ matrix.arch }}.AppImage
       - name: Package Windows
         if: matrix.platform == 'windows'
         run: pnpm --filter @send-thing/desktop exec electron-builder --win nsis --x64 --publish never
