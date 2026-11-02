@@ -1,0 +1,11 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "send-thing-marketing",
+  "account_id": "6383648dac838be2887d8cb9bc1e3e7d",
+  "compatibility_date": "2026-11-02",
+  "assets": { "directory": "./dist" },
+  "workers_dev": false,
+  "routes": [
+    { "pattern": "send-thing.lukestephens.co.za", "custom_domain": true },
+  ],
+}

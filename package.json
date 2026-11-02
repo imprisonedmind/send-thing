@@ -1,0 +1,34 @@
+{
+  "name": "send-thing",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "dev:server": "pnpm --filter @send-thing/server dev",
+    "dev:web": "pnpm --filter @send-thing/web dev",
+    "dev:desktop": "pnpm --filter @send-thing/desktop dev",
+    "dev:mobile": "pnpm --filter @send-thing/mobile dev",
+    "dev:marketing": "pnpm --filter @send-thing/marketing dev",
+    "typecheck": "pnpm -r typecheck",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "pnpm --filter @send-thing/contracts --filter @send-thing/client-runtime --filter @send-thing/server --filter @send-thing/desktop --filter @send-thing/marketing test",
+    "build": "pnpm build:desktop",
+    "build:desktop": "pnpm --filter @send-thing/web build && pnpm --filter @send-thing/desktop build",
+    "build:marketing": "pnpm --filter @send-thing/marketing build",
+    "deploy:marketing": "pnpm --filter @send-thing/marketing deploy",
+    "prepare:release": "node scripts/prepare-release.mjs",
+    "signing:android": "node scripts/init-android-signing.mjs",
+    "package:android": "node scripts/build-android.mjs",
+    "package:desktop": "pnpm build:desktop && pnpm --filter @send-thing/desktop package"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.4",
+    "prettier": "^3.6.2",
+    "prettier-plugin-astro": "^1.1.2",
+    "typescript": "6.0.2"
+  }
+}

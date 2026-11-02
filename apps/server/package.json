@@ -1,0 +1,27 @@
+{
+  "name": "@send-thing/server",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "exports": {
+    "./host": "./src/host.ts"
+  },
+  "scripts": {
+    "dev": "node --watch src/main.ts",
+    "start": "node src/main.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test src/*.test.ts"
+  },
+  "dependencies": {
+    "@send-thing/contracts": "workspace:*",
+    "effect": "catalog:",
+    "htmlparser2": "^12.0.0",
+    "ipaddr.js": "^2.5.0",
+    "proper-lockfile": "4.1.2",
+    "ws": "8.22.0"
+  },
+  "devDependencies": {
+    "@types/proper-lockfile": "^4.1.4",
+    "@types/ws": "^8.18.1"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "name": "@send-thing/client-runtime",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "exports": {
+    "./client": "./src/client.ts",
+    "./react": "./src/react.ts",
+    "./device-profile": "./src/device-profile.ts",
+    "./connection-presentation": "./src/connection-presentation.ts",
+    "./chat-follow": "./src/chat-follow.ts"
+  },
+  "scripts": {
+    "test": "node --test src/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@send-thing/contracts": "workspace:*",
+    "effect": "catalog:",
+    "react": "catalog:"
+  },
+  "devDependencies": {
+    "@types/react": "catalog:"
+  }
+}

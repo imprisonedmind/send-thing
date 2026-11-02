@@ -1,0 +1,94 @@
+import type { ExpoConfig } from "expo/config";
+
+const config: ExpoConfig = {
+  name: "Send Thing",
+  slug: "send-thing",
+  scheme: "sendthing",
+  version: "0.0.1",
+  orientation: "default",
+  userInterfaceStyle: "automatic",
+  ios: {
+    bundleIdentifier: "com.sendthing.mobile",
+    supportsTablet: true,
+    infoPlist: {
+      NSLocalNetworkUsageDescription:
+        "Send files and messages to the host devices in your groups.",
+      NSAppTransportSecurity: {
+        NSAllowsLocalNetworking: true,
+        NSAllowsArbitraryLoads: true,
+      },
+    },
+  },
+  android: {
+    package: "com.sendthing.mobile",
+    icon: "./assets/icon.png",
+    adaptiveIcon: {
+      foregroundImage: "./assets/icon.png",
+      backgroundColor: "#000000",
+    },
+    permissions: ["android.permission.CAMERA"],
+  },
+  plugins: [
+    "./plugins/with-camera-permission.cjs",
+    "./plugins/with-release-signing.cjs",
+    [
+      "expo-splash-screen",
+      {
+        backgroundColor: "#000000",
+        dark: { backgroundColor: "#000000" },
+      },
+    ],
+    "expo-video",
+    [
+      "expo-media-library",
+      {
+        savePhotosPermission:
+          "Save images and videos from your groups to Photos.",
+        granularPermissions: [],
+        isAccessMediaLocationEnabled: false,
+      },
+    ],
+    "expo-secure-store",
+    "expo-document-picker",
+    [
+      "expo-camera",
+      {
+        cameraPermission: "Scan a Send Thing group QR code.",
+        microphonePermission: false,
+        recordAudioAndroid: false,
+      },
+    ],
+    [
+      "expo-image-picker",
+      {
+        photosPermission: "Choose photos and videos to send to your group.",
+        cameraPermission: "Take a photo to send to your group.",
+        microphonePermission: false,
+      },
+    ],
+    ["expo-build-properties", { android: { usesCleartextTraffic: true } }],
+    [
+      "expo-sharing",
+      {
+        ios: {
+          enabled: true,
+          extensionBundleIdentifier: "com.sendthing.mobile.sharing",
+          appGroupId: "group.com.sendthing.mobile",
+          activationRule: {
+            supportsText: true,
+            supportsWebUrlWithMaxCount: 1,
+            supportsImageWithMaxCount: 16,
+            supportsMovieWithMaxCount: 16,
+            supportsFileWithMaxCount: 16,
+          },
+        },
+        android: {
+          enabled: true,
+          singleShareMimeTypes: ["*/*"],
+          multipleShareMimeTypes: ["*/*"],
+        },
+      },
+    ],
+  ],
+};
+export default config;

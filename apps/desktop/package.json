@@ -1,0 +1,72 @@
+{
+  "name": "@send-thing/desktop",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Share files, photos and links between your devices",
+  "author": "Luke Stephens",
+  "homepage": "https://send-thing.lukestephens.co.za",
+  "repository": "https://github.com/imprisonedmind/send-thing",
+  "type": "module",
+  "main": "dist-electron/main.cjs",
+  "scripts": {
+    "dev": "install-electron && node build.mjs && electron . --dev",
+    "build": "node build.mjs",
+    "package": "electron-builder",
+    "test": "node --test src/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@send-thing/contracts": "workspace:*",
+    "@send-thing/server": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "electron": "44.10.0",
+    "esbuild": "^0.25.12",
+    "electron-builder": "^26.16.1"
+  },
+  "build": {
+    "appId": "com.sendthing.desktop",
+    "productName": "Send Thing",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist-electron/**",
+      "assets/**",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../web/dist",
+        "to": "web"
+      }
+    ],
+    "mac": {
+      "icon": "assets/icon.png",
+      "artifactName": "send-thing-macos-${arch}.${ext}",
+      "extendInfo": {
+        "LSUIElement": true
+      },
+      "category": "public.app-category.utilities",
+      "target": [
+        "dmg"
+      ]
+    },
+    "win": {
+      "icon": "assets/icon.png",
+      "artifactName": "send-thing-windows-${arch}.${ext}",
+      "target": [
+        "nsis"
+      ]
+    },
+    "linux": {
+      "icon": "assets/icon.png",
+      "artifactName": "send-thing-linux-${arch}.${ext}",
+      "category": "Utility",
+      "target": [
+        "AppImage"
+      ]
+    }
+  }
+}

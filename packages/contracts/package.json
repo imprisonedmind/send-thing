@@ -1,0 +1,19 @@
+{
+  "name": "@send-thing/contracts",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./pairing": "./src/pairing.ts",
+    "./avatar": "./src/avatar.ts",
+    "./links": "./src/links.ts"
+  },
+  "scripts": {
+    "test": "node --test src/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "effect": "catalog:"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "@send-thing/marketing",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "deploy": "pnpm build && wrangler deploy",
+    "test": "node --test src/lib/*.test.ts",
+    "preview": "astro preview",
+    "typecheck": "astro check"
+  },
+  "dependencies": {
+    "astro": "7.3.5",
+    "cookie": "2.0.1",
+    "sharp": "0.35.4"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.10",
+    "typescript": "6.0.2",
+    "wrangler": "4.141.0"
+  }
+}

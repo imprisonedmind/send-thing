@@ -1,0 +1,10 @@
+node_modules
+.astro
+dist
+dist-electron
+release
+pnpm-lock.yaml
+patches
+.send-thing
+apps/mobile/ios
+apps/mobile/android

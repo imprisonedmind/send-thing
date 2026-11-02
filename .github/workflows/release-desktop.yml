@@ -1,0 +1,56 @@
+name: Build desktop release artifacts
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing draft release tag
+        required: true
+        default: v0.0.1
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            platform: linux
+            arch: x64
+            extension: AppImage
+          - os: ubuntu-24.04-arm
+            platform: linux
+            arch: arm64
+            extension: AppImage
+          - os: windows-latest
+            platform: windows
+            arch: x64
+            extension: exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build:desktop
+      - name: Package Linux
+        if: matrix.platform == 'linux'
+        run: pnpm --filter @send-thing/desktop exec electron-builder --linux AppImage --${{ matrix.arch }} --publish never
+      - name: Package Windows
+        if: matrix.platform == 'windows'
+        run: pnpm --filter @send-thing/desktop exec electron-builder --win nsis --x64 --publish never
+      - name: Attach to the draft release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+          ARTIFACT: apps/desktop/release/send-thing-${{ matrix.platform }}-${{ matrix.arch }}.${{ matrix.extension }}
+        run: gh release upload "$RELEASE_TAG" "$ARTIFACT" --clobber
