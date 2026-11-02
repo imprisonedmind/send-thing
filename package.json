@@ -19,7 +19,7 @@
     "build": "pnpm build:desktop",
     "build:desktop": "pnpm --filter @send-thing/web build && pnpm --filter @send-thing/desktop build",
     "build:marketing": "pnpm --filter @send-thing/marketing build",
-    "deploy:marketing": "pnpm --filter @send-thing/marketing deploy",
+    "deploy:marketing": "pnpm --filter @send-thing/marketing run deploy",
     "prepare:release": "node scripts/prepare-release.mjs",
     "signing:android": "node scripts/init-android-signing.mjs",
     "package:android": "node scripts/build-android.mjs",
