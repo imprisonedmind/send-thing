@@ -8,7 +8,7 @@
     "./discovery": "./src/discovery.ts"
   },
   "scripts": {
-    "dev": "node --watch src/main.ts",
+    "dev": "node --watch src/main.ts --dev",
     "start": "node src/main.ts",
     "typecheck": "tsc --noEmit",
     "test": "node --test src/*.test.ts"

@@ -1,14 +1,20 @@
 import type { ExpoConfig } from "expo/config";
 
+const variant = process.env.SEND_THING_VARIANT ?? "development";
+if (variant !== "development" && variant !== "production")
+  throw new Error("SEND_THING_VARIANT must be development or production.");
+const development = variant === "development";
+const appId = development ? "com.sendthing.mobile.dev" : "com.sendthing.mobile";
+
 const config: ExpoConfig = {
-  name: "Send Thing",
-  slug: "send-thing",
-  scheme: "sendthing",
+  name: development ? "Send Thing Dev" : "Send Thing",
+  slug: development ? "send-thing-dev" : "send-thing",
+  scheme: development ? "sendthing-dev" : "sendthing",
   version: "0.0.2",
   orientation: "default",
   userInterfaceStyle: "automatic",
   ios: {
-    bundleIdentifier: "com.sendthing.mobile",
+    bundleIdentifier: appId,
     buildNumber: "2",
     supportsTablet: true,
     infoPlist: {
@@ -22,7 +28,7 @@ const config: ExpoConfig = {
     },
   },
   android: {
-    package: "com.sendthing.mobile",
+    package: appId,
     versionCode: 2,
     icon: "./assets/icon.png",
     adaptiveIcon: {
@@ -75,8 +81,8 @@ const config: ExpoConfig = {
       {
         ios: {
           enabled: true,
-          extensionBundleIdentifier: "com.sendthing.mobile.sharing",
-          appGroupId: "group.com.sendthing.mobile",
+          extensionBundleIdentifier: `${appId}.sharing`,
+          appGroupId: `group.${appId}`,
           activationRule: {
             supportsText: true,
             supportsWebUrlWithMaxCount: 1,

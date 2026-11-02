@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Copy, QrCode, RotateCw } from "lucide-react";
-import { createPairingLink } from "@send-thing/contracts/pairing";
+import {
+  createPairingLink,
+  type PairingScheme,
+} from "@send-thing/contracts/pairing";
 import { normalizeHostUrl, type Group } from "@send-thing/contracts";
 import { errorText, type HostClient } from "@send-thing/client-runtime/client";
 import { Button } from "./ui/button.tsx";
@@ -11,11 +14,13 @@ export function PairingCard({
   group,
   addresses,
   autoCreate = false,
+  scheme = "sendthing",
 }: {
   client: HostClient;
   group: Group;
   addresses: string[];
   autoCreate?: boolean;
+  scheme?: PairingScheme;
 }) {
   const [address, setAddress] = useState(addresses[0] ?? client.connection.url);
   const [invite, setInvite] = useState<{
@@ -81,13 +86,16 @@ export function PairingCard({
     }
   }
   const link = invite
-    ? createPairingLink({
-        url: address,
-        hostId: client.connection.hostId,
-        group: group.name,
-        invite: invite.token,
-        expiresAt: invite.expiresAt,
-      })
+    ? createPairingLink(
+        {
+          url: address,
+          hostId: client.connection.hostId,
+          group: group.name,
+          invite: invite.token,
+          expiresAt: invite.expiresAt,
+        },
+        scheme,
+      )
     : null;
   return (
     <section className="settings-section">

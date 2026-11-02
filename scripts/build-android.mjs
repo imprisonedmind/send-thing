@@ -10,6 +10,7 @@ const env = {
   ...process.env,
   CI: "1",
   NODE_ENV: "production",
+  SEND_THING_VARIANT: "production",
   SEND_THING_ANDROID_KEYSTORE:
     process.env.SEND_THING_ANDROID_KEYSTORE ??
     join(directory, "android-release.p12"),
@@ -23,7 +24,15 @@ await Promise.all([
 ]);
 execFileSync(
   "pnpm",
-  ["exec", "expo", "prebuild", "--platform", "android", "--no-install"],
+  [
+    "exec",
+    "expo",
+    "prebuild",
+    "--clean",
+    "--platform",
+    "android",
+    "--no-install",
+  ],
   {
     cwd: join(root, "apps/mobile"),
     env,

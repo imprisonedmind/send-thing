@@ -2,7 +2,14 @@
 // Adapted from T3 Code's marketing Layout. See THIRD_PARTY_NOTICES.md.
 import { getImage, Image } from "astro:assets";
 import logo from "../assets/logo.png";
-import product from "../assets/product.png";
+import {
+  title as defaultTitle,
+  description as defaultDescription,
+} from "../lib/site-content";
+import {
+  structuredData,
+  serializeStructuredData,
+} from "../lib/structured-data";
 import dmSansLatinUrl from "../assets/fonts/dm-sans-latin.woff2?url";
 import "../styles/global.css";
 
@@ -11,29 +18,18 @@ interface Props {
   description?: string;
 }
 
-const {
-  title = "Send Thing — Share between your devices",
-  description = "Send files, photos, videos and links between your devices in a group chat. Connect over your local network or Tailscale, with a computer you choose as the host.",
-} = Astro.props;
+const { title = defaultTitle, description = defaultDescription } = Astro.props;
 const icon = await getImage({
   src: logo,
   width: 64,
   height: 64,
   format: "png",
 });
-const socialImage = await getImage({
-  src: product,
-  width: 1200,
-  format: "png",
-});
-const canonicalUrl = Astro.site
-  ? new URL(Astro.url.pathname, Astro.site)
-  : undefined;
-const socialImageUrl = Astro.site
-  ? new URL(socialImage.src, Astro.site)
-  : undefined;
+if (!Astro.site) throw new Error("Configure a canonical site URL.");
+const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
+const socialImageUrl = new URL("/social/send-thing-og.jpg", Astro.site);
 const imageAlt =
-  "Send Thing's menu-bar chat showing a shared photo and a link preview on a desktop.";
+  "Send Thing logo with the words: Send things between your devices.";
 ---
 
 <!doctype html>
@@ -43,25 +39,27 @@ const imageAlt =
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
     <meta name="theme-color" content="#000000" />
+    <meta
+      name="robots"
+      content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
+    />
     {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Send Thing" />
+    <meta property="og:locale" content="en_US" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
     {socialImageUrl && (
       <>
         <meta property="og:image" content={socialImageUrl} />
-        <meta
-          property="og:image:width"
-          content={socialImage.attributes.width}
-        />
-        <meta
-          property="og:image:height"
-          content={socialImage.attributes.height}
-        />
+        <meta property="og:image:type" content="image/jpeg" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
         <meta property="og:image:alt" content={imageAlt} />
         <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={title} />
+        <meta name="twitter:description" content={description} />
         <meta name="twitter:image" content={socialImageUrl} />
         <meta name="twitter:image:alt" content={imageAlt} />
       </>
@@ -74,6 +72,13 @@ const imageAlt =
       crossorigin="anonymous"
     />
     <link rel="icon" type="image/png" href={icon.src} />
+    <link rel="sitemap" href="/sitemap.xml" type="application/xml" />
+    <script
+      type="application/ld+json"
+      set:html={serializeStructuredData(
+        structuredData(canonicalUrl, title, description, socialImageUrl),
+      )}
+    />
     <title>{title}</title>
   </head>
   <body>

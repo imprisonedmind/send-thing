@@ -2,7 +2,14 @@
 
 Use Node 24+ and pnpm 10.33.0. Run `pnpm install`, then `pnpm dev:web` and
 `pnpm dev:desktop` in separate terminals. The desktop app starts its own host
-on port 47823. Do not run a standalone host on that port at the same time.
+on port 47824; the installed release uses 47823. Do not run a standalone dev
+host on 47824 at the same time as the desktop dev host.
+
+Dev apps are named **Send Thing Dev**, with `.dev` app IDs and separate data.
+Desktop dev data lives in the OS application-data directory under `Send Thing Dev`.
+The first dev launch needs its own pairing; existing release data is unchanged.
+`pnpm package:desktop:dev` creates a separate installable desktop app in
+`apps/desktop/release/development`.
 
 ## Mobile
 
@@ -15,8 +22,16 @@ pnpm --filter @send-thing/mobile android
 
 These commands regenerate native configuration, build, install and launch the
 app. Then run `pnpm dev:mobile` as needed. Expo Go cannot receive system shares.
+Native folders are generated with `prebuild --clean` so switching variants does
+not retain old package, scheme or share-extension IDs; keep native changes in plugins.
 Rebuild after native dependencies, permissions, icons or plugins change;
 restarting Metro alone is insufficient.
+
+Expo defaults to the development identity (`com.sendthing.mobile.dev`). The
+Android release script explicitly sets `SEND_THING_VARIANT=production`; use that
+variable for manual iOS release builds too. Dev uses `sendthing-dev://` links
+and separate iOS share-extension and App Group identifiers. The built-in scanner
+can read either variant's QR codes when you intentionally pair across variants.
 
 iOS requires signing for the app and share extension's App Group. Configure
 identifiers you own in `apps/mobile/app.config.ts`. The Android launcher and

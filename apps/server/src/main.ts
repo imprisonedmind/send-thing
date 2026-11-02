@@ -3,6 +3,7 @@ import { hostAddresses } from "./discovery.ts";
 import * as Effect from "effect/Effect";
 import { hostResource } from "./host.ts";
 
+const development = process.argv.includes("--dev");
 const controller = new AbortController();
 process.once("SIGINT", () => controller.abort());
 process.once("SIGTERM", () => controller.abort());
@@ -15,9 +16,14 @@ const program = Effect.scoped(
     if (Boolean(cert) !== Boolean(key))
       throw new Error("Set both SEND_THING_TLS_CERT and SEND_THING_TLS_KEY.");
     const host = yield* hostResource({
-      directory: resolve(process.env.SEND_THING_HOME ?? ".send-thing"),
+      directory: resolve(
+        process.env.SEND_THING_HOME ??
+          (development ? ".send-thing-dev" : ".send-thing"),
+      ),
       bind: process.env.SEND_THING_BIND ?? "0.0.0.0",
-      port: Number(process.env.SEND_THING_PORT ?? 47823),
+      port: Number(
+        process.env.SEND_THING_PORT ?? (development ? 47824 : 47823),
+      ),
       webRoot: process.env.SEND_THING_WEB_ROOT,
       tls: cert && key ? { cert, key } : undefined,
     });

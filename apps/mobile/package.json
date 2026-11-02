@@ -5,8 +5,8 @@
   "main": "index.ts",
   "scripts": {
     "dev": "expo start --dev-client",
-    "ios": "expo prebuild --platform ios && expo run:ios",
-    "android": "expo prebuild --platform android && expo run:android",
+    "ios": "expo prebuild --clean --platform ios && expo run:ios",
+    "android": "expo prebuild --clean --platform android && expo run:android",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

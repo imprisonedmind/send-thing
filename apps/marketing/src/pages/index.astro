@@ -5,6 +5,7 @@ import Layout from "../layouts/Layout.astro";
 import InstallCommand from "../components/InstallCommand.astro";
 import logo from "../assets/logo.png";
 import poster from "../assets/product-poster.jpg";
+import { questions } from "../lib/site-content";
 
 const steps = [
   {
@@ -95,6 +96,19 @@ const steps = [
       Your host stores the group’s messages and files. Keep it awake and
       connected to send or fetch things.
     </p>
+  </section>
+  <section
+    class="questions container"
+    aria-labelledby="questions-title"
+    id="questions"
+  >
+    <h2 id="questions-title">Questions</h2>
+    {questions.map(({ question, answer }) => (
+      <details>
+        <summary>{question}</summary>
+        <p>{answer}</p>
+      </details>
+    ))}
   </section>
 </Layout>
 
@@ -197,6 +211,26 @@ const steps = [
     margin-top: 40px;
     color: var(--fg-muted);
     font-size: 14px;
+  }
+  .questions {
+    padding-bottom: 96px;
+  }
+  .questions h2 {
+    margin-bottom: 32px;
+  }
+  .questions details {
+    border-top: 1px solid var(--border);
+    padding: 20px 0;
+  }
+  .questions summary {
+    cursor: pointer;
+    font-size: 18px;
+  }
+  .questions p {
+    color: var(--fg-muted);
+    max-width: 760px;
+    line-height: 1.7;
+    margin-top: 16px;
   }
   @media (max-width: 640px) {
     .hero {
