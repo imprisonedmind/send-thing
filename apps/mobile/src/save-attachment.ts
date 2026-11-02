@@ -33,10 +33,11 @@ export async function saveAttachment(
 ): Promise<string | null> {
   let destination: Directory | undefined;
   if (media) {
-    // Scoped storage lets Android 10+ add media without reading the library.
+    // Expo's Asset.create uses legacy storage through Android 10 (API 29).
+    // Android 11+ uses MediaStore and needs no library permission to add media.
     if (
       Platform.OS === "ios" ||
-      (Platform.OS === "android" && Number(Platform.Version) < 29)
+      (Platform.OS === "android" && Number(Platform.Version) < 30)
     ) {
       const permission = await MediaLibrary.requestPermissionsAsync(true);
       if (!permission.granted)
