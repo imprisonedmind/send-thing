@@ -58,6 +58,11 @@ the static website to Cloudflare Worker `send-thing-marketing` at
 `send-thing.lukestephens.co.za`. Cloudflare manages the custom domain's DNS and
 TLS. The main personal website is separate.
 
+After deployment, the marketing deploy command verifies the public IndexNow
+ownership file and submits the built sitemap's URLs. If submission fails after
+a successful deployment, rerun `pnpm --filter @send-thing/marketing indexnow`.
+An accepted submission is not a guarantee of indexing.
+
 `SITE_URL` overrides the canonical origin. Set `PUBLIC_IOS_DOWNLOAD_URL` to
 an App Store or TestFlight URL when available. Other downloads use GitHub
 release assets and the Homebrew tap, which must be published before installation
