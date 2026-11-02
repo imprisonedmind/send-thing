@@ -13,6 +13,7 @@ const config: ExpoConfig = {
     infoPlist: {
       NSLocalNetworkUsageDescription:
         "Send files and messages to the host devices in your groups.",
+      NSBonjourServices: ["_send-thing._tcp"],
       NSAppTransportSecurity: {
         NSAllowsLocalNetworking: true,
         NSAllowsArbitraryLoads: true,

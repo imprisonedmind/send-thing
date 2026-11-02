@@ -3,6 +3,7 @@ declare global {
   interface Window {
     sendThing?: {
       platform: string;
+      discoverHost(hostId: string): Promise<string[]>;
       copyMenu(
         target:
           | { kind: "link"; url: string }

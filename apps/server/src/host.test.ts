@@ -7,6 +7,7 @@ import { randomUUID } from "node:crypto";
 import * as Schema from "effect/Schema";
 import { Group, History, Invite, PairResult } from "@send-thing/contracts";
 import { startHost } from "./host.ts";
+import { HostProof } from "@send-thing/contracts/network";
 
 test("transport protects private file bytes and keeps committed history across restart", async () => {
   const directory = await mkdtemp(join(tmpdir(), "send-thing-test-"));
@@ -61,6 +62,31 @@ test("transport protects private file bytes and keeps committed history across r
       mime: "text/plain",
       size: 5,
     };
+    const proofResponse = await call(
+      "/api/host-proof",
+      "POST",
+      {
+        deviceId: paired.session.device.id,
+        nonce: randomUUID(),
+      },
+      "",
+    );
+    assert.equal(proofResponse.status, 200);
+    assert.equal(
+      Schema.decodeUnknownSync(HostProof)(await proofResponse.json()).hostId,
+      host.hostId,
+    );
+    assert.equal(
+      (
+        await call(
+          "/api/host-proof",
+          "POST",
+          { deviceId: paired.session.device.id },
+          "",
+        )
+      ).status,
+      400,
+    );
     assert.equal(
       (await call(`/api/groups/${personal.id}/files`, "POST", file)).status,
       200,

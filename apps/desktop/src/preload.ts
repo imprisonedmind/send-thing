@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld("sendThing", {
       | { kind: "file"; connection: Connection; file: Attachment },
   ) => ipcRenderer.invoke("copy:menu", target),
   bootstrap: () => ipcRenderer.invoke("bootstrap"),
+  discoverHost: (hostId: string) => ipcRenderer.invoke("host:discover", hostId),
   dismiss: () => ipcRenderer.send("window:dismiss"),
   mediaSource: (connection: Connection, file: Attachment) =>
     ipcRenderer.invoke("media:source", connection, file),

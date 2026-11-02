@@ -14,5 +14,6 @@ onlyBuiltDependencies:
   - electron
 
 patchedDependencies:
+  bonjour-service@1.4.4: patches/bonjour-service@1.4.4.patch
   "@react-native-masked-view/masked-view@0.3.2": patches/@react-native-masked-view__masked-view@0.3.2.patch
   expo-sharing@58.0.19: patches/expo-sharing@58.0.19.patch

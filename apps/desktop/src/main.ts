@@ -30,6 +30,7 @@ import * as Schema from "effect/Schema";
 import { containsPoint, popoverBounds, POPOVER_SIZE } from "./popover.ts";
 import { installMediaViewer } from "./media.ts";
 import { copyNativeFile } from "./clipboard.ts";
+import { discoverHost, hostAddresses } from "@send-thing/server/discovery";
 import {
   Attachment,
   Connection,
@@ -133,7 +134,16 @@ function dismiss() {
   if (!sheetOpen && !dialogOpen && !contextMenuOpen) window?.hide();
 }
 
-async function persistConnections(next: Connection[]) {
+let connectionWrite = Promise.resolve();
+function persistConnections(next: Connection[]) {
+  const write = connectionWrite
+    .catch(() => {})
+    .then(() => writeConnections(next));
+  connectionWrite = write;
+  return write;
+}
+
+async function writeConnections(next: Connection[]) {
   if (
     !safeStorage.isEncryptionAvailable() ||
     (process.platform === "linux" &&
@@ -410,9 +420,20 @@ async function start() {
     trusted(event);
     return {
       connections: credentials,
-      addresses: ready.addresses,
+      addresses: hostAddresses(
+        process.env.SEND_THING_BIND ?? "0.0.0.0",
+        Number(new URL(ready.url).port),
+        new URL(ready.url).protocol.slice(0, -1),
+      ),
       localHostId: ready.hostId,
     };
+  });
+  ipcMain.handle("host:discover", (event, rawHostId) => {
+    trusted(event);
+    const hostId = Schema.decodeUnknownSync(Id)(rawHostId);
+    if (!credentials.some((connection) => connection.hostId === hostId))
+      throw new Error("Unknown host.");
+    return discoverHost(hostId);
   });
   installMediaViewer({
     rendererUrl: dev ? "http://localhost:5173" : ready.url,

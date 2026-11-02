@@ -4,7 +4,8 @@
   "version": "0.0.1",
   "type": "module",
   "exports": {
-    "./host": "./src/host.ts"
+    "./host": "./src/host.ts",
+    "./discovery": "./src/discovery.ts"
   },
   "scripts": {
     "dev": "node --watch src/main.ts",
@@ -14,6 +15,7 @@
   },
   "dependencies": {
     "@send-thing/contracts": "workspace:*",
+    "bonjour-service": "^1.4.4",
     "effect": "catalog:",
     "htmlparser2": "^12.0.0",
     "ipaddr.js": "^2.5.0",

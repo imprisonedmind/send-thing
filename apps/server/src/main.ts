@@ -1,5 +1,5 @@
 import { resolve } from "node:path";
-import { networkInterfaces } from "node:os";
+import { hostAddresses } from "./discovery.ts";
 import * as Effect from "effect/Effect";
 import { hostResource } from "./host.ts";
 
@@ -21,10 +21,10 @@ const program = Effect.scoped(
       webRoot: process.env.SEND_THING_WEB_ROOT,
       tls: cert && key ? { cert, key } : undefined,
     });
-    const addresses = Object.values(networkInterfaces()).flatMap((interfaces) =>
-      (interfaces ?? [])
-        .filter((address) => address.family === "IPv4" && !address.internal)
-        .map((address) => `${host.protocol}://${address.address}:${host.port}`),
+    const addresses = hostAddresses(
+      process.env.SEND_THING_BIND ?? "0.0.0.0",
+      host.port,
+      host.protocol,
     );
     process.send?.({
       type: "ready",

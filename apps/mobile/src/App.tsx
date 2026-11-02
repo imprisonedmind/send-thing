@@ -60,6 +60,7 @@ import { CreateGroupScreen } from "./CreateGroupScreen.tsx";
 import { Icon } from "./components/Icon.tsx";
 import { ConnectionStatus } from "./components/ConnectionStatus.tsx";
 import { MenuView } from "@react-native-menu/menu";
+import { discoverHost } from "./discovery.ts";
 
 const Stack = createNativeStackNavigator<Routes>();
 const navigation = createNavigationContainerRef<Routes>();
@@ -90,6 +91,19 @@ export function App() {
   const selectHost = (id: string) => selectGroup(id, null);
   const host = useHost(
     connections.find((c) => c.hostId === selectedHostId) ?? connections[0],
+    {
+      discover: discoverHost,
+      nonce: Crypto.randomUUID,
+      onConnectionChange: async (next) => {
+        await save(
+          connections.map((connection) =>
+            connection.hostId === next.hostId && connection.token === next.token
+              ? next
+              : connection,
+          ),
+        );
+      },
+    },
   );
   const deviceSettings = useDeviceProfile(
     profileStorage,
@@ -104,19 +118,14 @@ export function App() {
     const client = host.client;
     if (!client) return;
     let active = true;
-    let networkType: Network.NetworkStateType | undefined;
+    let hadNetwork = false;
     const record = (state: Network.NetworkState) => {
       if (!active) return;
       if (state.isConnected !== undefined)
         client.setNetworkAvailable(state.isConnected);
-      if (
-        state.isConnected &&
-        networkType &&
-        state.type !== networkType &&
-        AppState.currentState === "active"
-      )
-        client.reconnect();
-      if (state.isConnected) networkType = state.type;
+      if (state.isConnected && hadNetwork && AppState.currentState === "active")
+        client.networkChanged();
+      hadNetwork = Boolean(state.isConnected);
     };
     const check = () =>
       void Network.getNetworkStateAsync()

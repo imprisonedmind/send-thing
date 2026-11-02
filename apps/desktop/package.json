@@ -46,7 +46,11 @@
       "icon": "assets/icon.png",
       "artifactName": "send-thing-macos-${arch}.${ext}",
       "extendInfo": {
-        "LSUIElement": true
+        "LSUIElement": true,
+        "NSLocalNetworkUsageDescription": "Find your paired Send Thing hosts on the local network.",
+        "NSBonjourServices": [
+          "_send-thing._tcp"
+        ]
       },
       "category": "public.app-category.utilities",
       "target": [

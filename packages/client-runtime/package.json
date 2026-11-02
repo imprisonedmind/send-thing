@@ -15,6 +15,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@noble/hashes": "^2.4.0",
     "@send-thing/contracts": "workspace:*",
     "effect": "catalog:",
     "react": "catalog:"

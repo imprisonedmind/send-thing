@@ -100,6 +100,9 @@ export const Session = Schema.Struct({
   hostId: Id,
   device: Device,
   groups: Schema.Array(Group),
+  endpoints: Schema.optional(
+    Schema.Array(Schema.String).check(Schema.isMaxLength(16)),
+  ),
 });
 export type Session = typeof Session.Type;
 export const PairInput = Schema.Struct({ invite: Id, profile: ProfileInput });
@@ -109,13 +112,22 @@ export const CreateGroupInput = Schema.Struct({ name: Name });
 export const Event = Schema.Union([
   Schema.Struct({ type: Schema.Literal("ready") }),
   Schema.Struct({ type: Schema.Literal("changed"), groupId: Id }),
+  Schema.Struct({ type: Schema.Literal("pong"), nonce: Id }),
 ]);
+export const SocketPing = Schema.Struct({
+  type: Schema.Literal("ping"),
+  nonce: Id,
+});
 export const SocketAuth = Schema.Struct({ token: Id });
 export const Connection = Schema.Struct({
   hostId: Id,
   url: Schema.String,
   token: Id,
   label: Schema.String,
+  deviceId: Schema.optional(Id),
+  routes: Schema.optional(
+    Schema.Array(Schema.String).check(Schema.isMaxLength(16)),
+  ),
 });
 export type Connection = typeof Connection.Type;
 export const Connections = Schema.Array(Connection);
