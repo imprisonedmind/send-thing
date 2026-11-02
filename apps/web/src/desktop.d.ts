@@ -20,6 +20,7 @@ declare global {
         connections: Connection[];
         addresses: string[];
         localHostId: string;
+        pairingScheme: "sendthing" | "sendthing-dev";
       }>;
       saveConnections(connections: Connection[]): Promise<void>;
       prepareFile(connection: Connection, file: Attachment): Promise<string>;

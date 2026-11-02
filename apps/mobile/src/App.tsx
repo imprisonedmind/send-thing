@@ -150,7 +150,8 @@ export function App() {
 
   useEffect(() => {
     const receiveLink = (url: string | null | undefined) => {
-      if (url?.startsWith("sendthing://pair")) setPairingLink(url);
+      if (url && /^(sendthing|sendthing-dev):\/\/pair(?:[/?]|$)/.test(url))
+        setPairingLink(url);
     };
     void Linking.getInitialURL()
       .then(receiveLink)

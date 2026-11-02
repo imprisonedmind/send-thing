@@ -57,6 +57,9 @@ const profileStorage: ProfileStorage = {
 export function App() {
   const [connections, setConnections] = useState<Connection[]>([]);
   const [addresses, setAddresses] = useState<string[]>([]);
+  const [pairingScheme, setPairingScheme] = useState<
+    "sendthing" | "sendthing-dev"
+  >(import.meta.env.DEV ? "sendthing-dev" : "sendthing");
   const [localHostId, setLocalHostId] = useState<string>();
   const [hostId, setHostId] = useState("");
   const [groupId, setGroupId] = useState("");
@@ -128,6 +131,7 @@ export function App() {
         if (cancelled) return;
         setConnections(data.connections);
         setAddresses(data.addresses);
+        setPairingScheme(data.pairingScheme);
         setLocalHostId(data.localHostId);
       } else {
         const raw = localStorage.getItem(storageKey);
@@ -393,6 +397,7 @@ export function App() {
           ) : host.client && group && isHost && screen === "pair" ? (
             <div className="settings scroll">
               <PairingCard
+                scheme={pairingScheme}
                 autoCreate
                 key={`${connection?.hostId}/${group.id}`}
                 client={host.client}

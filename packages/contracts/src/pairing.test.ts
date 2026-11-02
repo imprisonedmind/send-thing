@@ -18,6 +18,17 @@ test("a scanned link carries the selected host, group and one-time invitation", 
   );
 });
 
+test("development links target the development app and remain scannable in either app", () => {
+  const link = createPairingLink(invitation, "sendthing-dev");
+  assert.equal(new URL(link).protocol, "sendthing-dev:");
+  assert.equal(new URL(createPairingLink(invitation)).protocol, "sendthing:");
+  assert.deepEqual(parsePairingLink(link, now), invitation);
+  assert.throws(
+    () => parsePairingLink(link.replace("sendthing-dev:", "another-app:"), now),
+    /supported/,
+  );
+});
+
 test("expired codes cannot be submitted, including exactly at expiry", () => {
   assert.throws(
     () =>

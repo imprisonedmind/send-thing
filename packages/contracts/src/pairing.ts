@@ -10,9 +10,14 @@ const PairingCode = Schema.Struct({
 });
 export type PairingCode = typeof PairingCode.Type;
 
-export function createPairingLink(input: PairingCode): string {
+export type PairingScheme = "sendthing" | "sendthing-dev";
+
+export function createPairingLink(
+  input: PairingCode,
+  scheme: PairingScheme = "sendthing",
+): string {
   const code = Schema.decodeUnknownSync(PairingCode)(input);
-  const link = new URL("sendthing://pair");
+  const link = new URL(`${scheme}://pair`);
   link.searchParams.set("v", "1");
   link.searchParams.set("host", normalizeHostUrl(code.url));
   link.searchParams.set("hostId", code.hostId);
@@ -31,7 +36,7 @@ export function parsePairingLink(input: string, now = Date.now()): PairingCode {
     throw new Error("Scan a Send Thing group QR code.");
   }
   if (
-    link.protocol !== "sendthing:" ||
+    !["sendthing:", "sendthing-dev:"].includes(link.protocol) ||
     link.hostname !== "pair" ||
     (link.pathname !== "" && link.pathname !== "/") ||
     link.username ||

@@ -12,8 +12,13 @@ the same signing key; never replace it for an existing release.
 `pnpm package:android` regenerates Android, signs the release APK and writes
 `release/artifacts/send-thing-android.apk`. CI can supply
 `SEND_THING_ANDROID_KEYSTORE` and `SEND_THING_ANDROID_PASSWORD_FILE`.
-Debug installations use a different key and cannot be updated in place with
-this APK. Uninstalling an existing app removes its local data.
+Development installs use `com.sendthing.mobile.dev` and coexist with the release.
+Older debug installs used the release ID and a different key, so this APK cannot
+update those in place. Uninstalling an existing app removes its local data.
+
+Mobile configuration defaults to development. `package:android` selects
+`SEND_THING_VARIANT=production` explicitly; set the same variable for manual
+iOS release builds to retain the production app, extension and App Group IDs.
 
 ## Desktop
 

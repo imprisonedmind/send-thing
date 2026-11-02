@@ -12,7 +12,7 @@ import {
   clipboard,
 } from "electron";
 import { fork, type ChildProcess } from "node:child_process";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import {
   mkdir,
   readFile,
@@ -22,7 +22,7 @@ import {
   rm,
   stat,
 } from "node:fs/promises";
-import { constants, createWriteStream, existsSync } from "node:fs";
+import { constants, createWriteStream, existsSync, mkdirSync } from "node:fs";
 import { pipeline } from "node:stream/promises";
 import { Readable, Transform } from "node:stream";
 import { createHash, randomUUID } from "node:crypto";
@@ -41,8 +41,18 @@ import {
 } from "@send-thing/contracts";
 
 const dev = process.argv.includes("--dev");
-app.setName("Send Thing");
-if (dev) app.setPath("userData", resolve("../../.send-thing/desktop"));
+const development = dev || app.getName() === "Send Thing Dev";
+const appName = development ? "Send Thing Dev" : "Send Thing";
+app.setName(appName);
+if (development) {
+  const devDirectory = join(app.getPath("appData"), appName);
+  mkdirSync(devDirectory, { recursive: true, mode: 0o700 });
+  app.setPath("userData", devDirectory);
+  app.setPath("sessionData", devDirectory);
+}
+app.setAppUserModelId(
+  development ? "com.sendthing.desktop.dev" : "com.sendthing.desktop",
+);
 const directory = app.getPath("userData");
 let window: BrowserWindow | undefined;
 let tray: Tray | undefined;
@@ -294,6 +304,8 @@ async function start() {
         ...process.env,
         ELECTRON_RUN_AS_NODE: "1",
         SEND_THING_HOME: join(directory, "host"),
+        SEND_THING_PORT:
+          process.env.SEND_THING_PORT ?? (development ? "47824" : "47823"),
         SEND_THING_WEB_ROOT: dev ? "" : join(process.resourcesPath, "web"),
       },
       stdio: ["ignore", "inherit", "inherit", "ipc"],
@@ -333,8 +345,8 @@ async function start() {
   backend?.on("exit", () => {
     if (!quitting) {
       dialog.showErrorBox(
-        "Send Thing host stopped",
-        "Restart Send Thing to resume sharing.",
+        `${appName} host stopped`,
+        `Restart ${appName} to resume sharing.`,
       );
       app.quit();
     }
@@ -342,7 +354,7 @@ async function start() {
   window = new BrowserWindow({
     ...POPOVER_SIZE,
     show: false,
-    title: "Send Thing",
+    title: appName,
     frame: false,
     resizable: false,
     movable: false,
@@ -420,6 +432,7 @@ async function start() {
     trusted(event);
     return {
       connections: credentials,
+      pairingScheme: development ? "sendthing-dev" : "sendthing",
       addresses: hostAddresses(
         process.env.SEND_THING_BIND ?? "0.0.0.0",
         Number(new URL(ready.url).port),
@@ -545,14 +558,14 @@ async function start() {
       event.sender.startDrag({ file, icon: icon() });
   });
   tray = new Tray(icon());
-  tray.setToolTip("Send Thing");
+  tray.setToolTip(appName);
   if (process.platform === "darwin") tray.setIgnoreDoubleClickEvents(true);
   tray.on("click", () => (window?.isVisible() ? dismiss() : reveal()));
   tray.on("right-click", () => {
     dismiss();
     tray?.popUpContextMenu(
       Menu.buildFromTemplate([
-        { label: "Open Send Thing", click: reveal },
+        { label: `Open ${appName}`, click: reveal },
         ...(process.platform === "linux"
           ? []
           : [
@@ -565,7 +578,7 @@ async function start() {
               },
             ]),
         { type: "separator" },
-        { label: "Quit Send Thing", click: () => app.quit() },
+        { label: `Quit ${appName}`, click: () => app.quit() },
       ]),
     );
   });
@@ -608,7 +621,7 @@ else {
     .then(start)
     .catch((error) => {
       console.error("[desktop] Startup failed:", error);
-      dialog.showErrorBox("Could not start Send Thing", String(error));
+      dialog.showErrorBox(`Could not start ${appName}`, String(error));
       app.quit();
     });
 }
