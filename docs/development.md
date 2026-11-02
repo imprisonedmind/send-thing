@@ -22,6 +22,10 @@ iOS requires signing for the app and share extension's App Group. Configure
 identifiers you own in `apps/mobile/app.config.ts`. The Android launcher and
 adaptive icons use `apps/mobile/assets/icon.png`.
 
+LAN discovery uses native Bonjour/Android NSD through `react-native-zeroconf`;
+allow local network access when prompted. The desktop/server Bonjour dependency
+is patched to report UDP socket errors instead of terminating the host.
+
 ## Checks
 
 ```sh

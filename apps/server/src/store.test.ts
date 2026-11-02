@@ -1,9 +1,53 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
+import { createHash, createHmac, randomUUID } from "node:crypto";
+import {
+  credentialIdMessage,
+  proofMessage,
+} from "@send-thing/contracts/network";
 import { Store, newToken } from "./store.ts";
 
 const profile = { name: "Phone", kind: "phone", avatar: null } as const;
+
+test("host proofs are bound to the paired device and fresh challenge without exposing its credential", () => {
+  const token = newToken();
+  const store = new Store(":memory:", { name: "Host", token });
+  try {
+    const nonce = randomUUID();
+    const result = store.hostProof(store.hostId, nonce);
+    assert.equal(
+      result.proof,
+      createHmac("sha256", createHash("sha256").update(token).digest())
+        .update(proofMessage(store.hostId, store.hostId, nonce))
+        .digest("hex"),
+    );
+    assert.notEqual(
+      result.proof,
+      store.hostProof(store.hostId, randomUUID()).proof,
+    );
+    assert.throws(
+      () => store.hostProof(randomUUID(), nonce),
+      /Unknown paired device/,
+    );
+    assert.equal(JSON.stringify(result).includes(token), false);
+    const key = createHash("sha256").update(token).digest();
+    const credentialId = createHash("sha256")
+      .update(credentialIdMessage(key.toString("hex")))
+      .digest("hex");
+    assert.equal(
+      store.hostProof(credentialId, nonce, "credential").proof,
+      createHmac("sha256", key)
+        .update(proofMessage(store.hostId, credentialId, nonce))
+        .digest("hex"),
+    );
+    assert.throws(
+      () => store.hostProof(randomUUID(), nonce, "credential"),
+      /Unknown paired device/,
+    );
+  } finally {
+    store.close();
+  }
+});
 
 test("only the host can delete a group, preserving identities and other groups", () => {
   const store = new Store(":memory:", { name: "Host", token: newToken() });

@@ -28,6 +28,12 @@ export function PairingCard({
   const [error, setError] = useState<string | null>(null);
   const started = useRef(false);
   useEffect(() => {
+    if (addresses.length && !addresses.includes(address)) {
+      setAddress(addresses[0]!);
+      setInvite(null);
+    }
+  }, [addresses, address]);
+  useEffect(() => {
     if (autoCreate && !started.current) {
       started.current = true;
       void create();

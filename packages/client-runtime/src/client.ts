@@ -1,4 +1,16 @@
 import * as Schema from "effect/Schema";
+import { connectionLog } from "./connection-log.ts";
+import {
+  hostRoutes,
+  isLanUrl,
+  isLoopbackUrl,
+} from "@send-thing/contracts/network";
+import {
+  connectionNonce,
+  resolveHostRoute,
+  type ConnectionOptions,
+} from "./routes.ts";
+export type { ConnectionOptions } from "./routes.ts";
 import {
   Attachment,
   UploadReservation,
@@ -87,6 +99,12 @@ export async function pair(
     url: normalized,
     token: result.token,
     label: result.session.groups[0]?.name ?? profile.name,
+    ...(result.session.endpoints
+      ? {
+          deviceId: result.session.device.id,
+          routes: hostRoutes([normalized, ...result.session.endpoints]),
+        }
+      : {}),
   };
 }
 
@@ -104,7 +122,12 @@ export interface HostSnapshot {
 }
 
 export class HostClient {
-  readonly connection: Connection;
+  connection: Connection;
+  private readonly options: ConnectionOptions;
+  private routeAbort?: AbortController;
+  private routeTimer?: ReturnType<typeof setInterval>;
+  private checkingRoute = false;
+  private pendingProbe?: { nonce: string; done: () => void };
   private snapshot: HostSnapshot = {
     session: null,
     status: "connecting",
@@ -122,8 +145,9 @@ export class HostClient {
   private networkAvailable = true;
   private refreshAbort?: AbortController;
 
-  constructor(connection: Connection) {
-    this.connection = connection;
+  constructor(connection: Connection, options: ConnectionOptions = {}) {
+    this.connection = { ...connection };
+    this.options = options;
   }
   getSnapshot = () => this.snapshot;
   subscribe = (listener: () => void) => {
@@ -133,6 +157,17 @@ export class HostClient {
     };
   };
   private publish(next: Partial<HostSnapshot>) {
+    if (
+      (next.status && next.status !== this.snapshot.status) ||
+      (next.error && next.error !== this.snapshot.error)
+    ) {
+      connectionLog("state", {
+        hostId: this.connection.hostId,
+        url: this.connection.url,
+        status: next.status ?? this.snapshot.status,
+        ...(next.error ? { error: next.error } : {}),
+      });
+    }
     this.snapshot = { ...this.snapshot, ...next };
     for (const listener of this.listeners) listener();
   }
@@ -141,11 +176,14 @@ export class HostClient {
     if (!this.stopped) return;
     this.stopped = false;
     this.connect();
+    this.routeTimer = setInterval(() => void this.checkConnection(), 30_000);
   }
   stop() {
     this.stopped = true;
     clearTimeout(this.timer);
     clearTimeout(this.handshake);
+    clearInterval(this.routeTimer);
+    this.routeAbort?.abort();
     this.refreshAbort?.abort();
     this.refreshPending = false;
     const socket = this.socket;
@@ -155,6 +193,19 @@ export class HostClient {
   reconnect() {
     this.stop();
     this.start();
+  }
+  networkChanged() {
+    if (this.stopped) return;
+    if (this.snapshot.status === "online") {
+      connectionLog("network-changed", {
+        hostId: this.connection.hostId,
+        status: this.snapshot.status,
+      });
+      void this.checkConnection();
+    }
+    // Connectivity notifications can repeat every few seconds without a route
+    // change. Let an existing discovery/retry finish; offline -> online already
+    // restarts immediately through setNetworkAvailable.
   }
   setNetworkAvailable(available: boolean) {
     if (this.networkAvailable === available) return;
@@ -170,6 +221,11 @@ export class HostClient {
 
   private connect() {
     if (this.stopped) return;
+    connectionLog("connect", {
+      hostId: this.connection.hostId,
+      url: this.connection.url,
+      attempt: this.attempt,
+    });
     if (!this.networkAvailable) {
       this.publish({ status: "offline", error: null });
       return;
@@ -177,6 +233,121 @@ export class HostClient {
     this.publish({
       status:
         this.snapshot.session || this.attempt ? "reconnecting" : "connecting",
+    });
+    if (
+      (!this.connection.deviceId && this.attempt === 0) ||
+      isLoopbackUrl(this.connection.url)
+    ) {
+      this.openSocket();
+      return;
+    }
+    const controller = new AbortController();
+    this.routeAbort = controller;
+    void resolveHostRoute(this.connection, this.options, controller.signal)
+      .then(async (url) => {
+        if (controller.signal.aborted || this.stopped || !url) return;
+        await this.updateConnection({ ...this.connection, url });
+        if (!controller.signal.aborted && !this.stopped) this.openSocket();
+      })
+      .catch((error) => {
+        if (controller.signal.aborted || this.stopped) return;
+        this.publish({ status: "reconnecting", error: errorText(error) });
+        this.timer = setTimeout(
+          () => this.connect(),
+          Math.min(30_000, 1000 * 2 ** this.attempt++),
+        );
+      });
+  }
+
+  private async updateConnection(next: Connection) {
+    if (JSON.stringify(next) === JSON.stringify(this.connection)) return;
+    await this.options.onConnectionChange?.(next);
+    this.connection = next;
+  }
+
+  private async checkConnection() {
+    if (
+      this.stopped ||
+      this.checkingRoute ||
+      this.snapshot.status !== "online" ||
+      !this.connection.deviceId ||
+      isLoopbackUrl(this.connection.url)
+    )
+      return;
+    this.checkingRoute = true;
+    const controller = new AbortController();
+    this.routeAbort = controller;
+    try {
+      try {
+        await this.probeSocket(controller.signal);
+      } catch {
+        if (
+          !this.stopped &&
+          this.routeAbort === controller &&
+          this.snapshot.status === "online"
+        )
+          this.reconnect();
+        return;
+      }
+      if (
+        isLanUrl(this.connection.url) ||
+        !this.options.discover ||
+        controller.signal.aborted ||
+        this.stopped
+      )
+        return;
+      const url = await resolveHostRoute(
+        this.connection,
+        this.options,
+        controller.signal,
+        true,
+      );
+      if (url && !controller.signal.aborted && !this.stopped) {
+        await this.updateConnection({ ...this.connection, url });
+        if (!controller.signal.aborted && !this.stopped) this.reconnect();
+      }
+    } catch (error) {
+      if (!controller.signal.aborted) this.publish({ error: errorText(error) });
+    } finally {
+      this.checkingRoute = false;
+    }
+  }
+
+  private probeSocket(signal: AbortSignal) {
+    return new Promise<void>((resolve, reject) => {
+      const nonce = (this.options.nonce ?? connectionNonce)();
+      const finish = (error?: Error) => {
+        clearTimeout(timer);
+        signal.removeEventListener("abort", abort);
+        if (this.pendingProbe?.nonce === nonce) this.pendingProbe = undefined;
+        if (error) reject(error);
+        else resolve();
+      };
+      const abort = () => finish(new Error("Connection probe cancelled."));
+      const timer = setTimeout(
+        () => finish(new Error("Host stopped responding.")),
+        isLanUrl(this.connection.url) ? 3_000 : 10_000,
+      );
+      this.pendingProbe = { nonce, done: () => finish() };
+      signal.addEventListener("abort", abort, { once: true });
+      if (signal.aborted) {
+        abort();
+        return;
+      }
+      try {
+        if (this.socket?.readyState !== WebSocket.OPEN)
+          throw new Error("Socket closed.");
+        this.socket.send(JSON.stringify({ type: "ping", nonce }));
+      } catch (error) {
+        finish(error instanceof Error ? error : new Error(String(error)));
+      }
+    });
+  }
+
+  private openSocket() {
+    connectionLog("socket-open", {
+      hostId: this.connection.hostId,
+      url: this.connection.url,
     });
     const url = new URL(normalizeHostUrl(this.connection.url));
     url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
@@ -195,6 +366,11 @@ export class HostClient {
         const event = Schema.decodeUnknownSync(Event)(
           JSON.parse(String(message.data)),
         );
+        if (event.type === "pong") {
+          if (event.nonce === this.pendingProbe?.nonce)
+            this.pendingProbe.done();
+          return;
+        }
         if (event.type === "ready") {
           clearTimeout(this.handshake);
         }
@@ -211,7 +387,12 @@ export class HostClient {
     socket.onerror = () => socket.close();
     socket.onclose = (event) => {
       if (!isCurrent()) return;
+      connectionLog("socket-close", {
+        hostId: this.connection.hostId,
+        code: event.code,
+      });
       clearTimeout(this.handshake);
+      this.routeAbort?.abort();
       this.refreshAbort?.abort();
       if (this.snapshot.status === "unsupported") return;
       this.publish({
@@ -257,6 +438,20 @@ export class HostClient {
             "This address now belongs to a different host. Pair again.",
           );
         if (current()) {
+          if (session.endpoints) {
+            await this.updateConnection({
+              ...this.connection,
+              deviceId: session.device.id,
+              routes: hostRoutes([
+                this.connection.url,
+                ...(this.connection.routes ?? []).filter(
+                  (url) => !isLanUrl(url),
+                ),
+                ...session.endpoints,
+              ]),
+            });
+          }
+          if (!current()) break;
           this.attempt = 0;
           this.publish({
             session,

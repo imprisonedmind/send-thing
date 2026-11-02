@@ -1,7 +1,7 @@
 {
   "name": "@send-thing/desktop",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Share files, photos and links between your devices",
   "author": "Luke Stephens",
   "homepage": "https://send-thing.lukestephens.co.za",
@@ -46,7 +46,11 @@
       "icon": "assets/icon.png",
       "artifactName": "send-thing-macos-${arch}.${ext}",
       "extendInfo": {
-        "LSUIElement": true
+        "LSUIElement": true,
+        "NSLocalNetworkUsageDescription": "Find your paired Send Thing hosts on the local network.",
+        "NSBonjourServices": [
+          "_send-thing._tcp"
+        ]
       },
       "category": "public.app-category.utilities",
       "target": [

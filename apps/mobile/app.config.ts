@@ -4,15 +4,17 @@ const config: ExpoConfig = {
   name: "Send Thing",
   slug: "send-thing",
   scheme: "sendthing",
-  version: "0.0.1",
+  version: "0.0.2",
   orientation: "default",
   userInterfaceStyle: "automatic",
   ios: {
     bundleIdentifier: "com.sendthing.mobile",
+    buildNumber: "2",
     supportsTablet: true,
     infoPlist: {
       NSLocalNetworkUsageDescription:
         "Send files and messages to the host devices in your groups.",
+      NSBonjourServices: ["_send-thing._tcp"],
       NSAppTransportSecurity: {
         NSAllowsLocalNetworking: true,
         NSAllowsArbitraryLoads: true,
@@ -21,6 +23,7 @@ const config: ExpoConfig = {
   },
   android: {
     package: "com.sendthing.mobile",
+    versionCode: 2,
     icon: "./assets/icon.png",
     adaptiveIcon: {
       foregroundImage: "./assets/icon.png",

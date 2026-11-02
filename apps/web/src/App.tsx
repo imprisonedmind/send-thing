@@ -68,7 +68,21 @@ export function App() {
   const [sending, setSending] = useState(false);
   const connection =
     connections.find((c) => c.hostId === hostId) ?? connections[0];
-  const host = useHost(connection);
+  const host = useHost(connection, {
+    discover: (id, signal) =>
+      signal.aborted
+        ? Promise.resolve([])
+        : (window.sendThing?.discoverHost(id) ?? Promise.resolve([])),
+    onConnectionChange: async (next) => {
+      await save(
+        connections.map((connection) =>
+          connection.hostId === next.hostId && connection.token === next.token
+            ? next
+            : connection,
+        ),
+      );
+    },
+  });
   const deviceSettings = useDeviceProfile(
     profileStorage,
     connections,
@@ -80,6 +94,27 @@ export function App() {
   const group = groups.find((g) => g.id === groupId) ?? groups[0];
   const isHost =
     host.session?.device.id === host.session?.hostId && Boolean(host.session);
+
+  useEffect(() => {
+    if (!window.sendThing || (screen !== "pair" && screen !== "settings"))
+      return;
+    let cancelled = false;
+    const refresh = () =>
+      void window
+        .sendThing!.bootstrap()
+        .then((data) => {
+          if (!cancelled) setAddresses(data.addresses);
+        })
+        .catch((error) => {
+          if (!cancelled) setError(errorText(error));
+        });
+    refresh();
+    const timer = setInterval(refresh, 5_000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [screen]);
 
   useEffect(() => {
     let cancelled = false;

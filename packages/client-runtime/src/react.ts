@@ -1,7 +1,14 @@
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import type { Connection, History, LinkPreview } from "@send-thing/contracts";
 import { firstLink } from "@send-thing/contracts/links";
-import { HostClient, errorText } from "./client.ts";
+import { HostClient, errorText, type ConnectionOptions } from "./client.ts";
+import { connectionNonce } from "./routes.ts";
 
 const empty = {
   session: null,
@@ -39,10 +46,24 @@ export function useLinkPreview(
   }, [client, groupId, messageId, link, key, status]);
   return result?.key === key ? result.value : null;
 }
-export function useHost(connection: Connection | undefined) {
+export function useHost(
+  connection: Connection | undefined,
+  options: ConnectionOptions = {},
+) {
+  const latest = useRef(options);
+  latest.current = options;
   const client = useMemo(
-    () => (connection ? new HostClient(connection) : null),
-    [connection],
+    () =>
+      connection
+        ? new HostClient(connection, {
+            discover: (hostId, signal) =>
+              latest.current.discover?.(hostId, signal) ?? Promise.resolve([]),
+            nonce: () => latest.current.nonce?.() ?? connectionNonce(),
+            onConnectionChange: async (next) =>
+              latest.current.onConnectionChange?.(next),
+          })
+        : null,
+    [connection?.hostId, connection?.token],
   );
   useEffect(() => {
     client?.start();

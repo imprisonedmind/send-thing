@@ -7,7 +7,7 @@ multiple groups and hosts; reopening the app restores its last-used group.
 
 Closing the desktop popup keeps hosting active. Quitting stops the host.
 Remote devices need the host awake and reachable. There is no cloud relay,
-automatic background outbox, discovery or port forwarding.
+automatic background outbox or port forwarding.
 
 ## Network
 
@@ -15,6 +15,21 @@ The host listens on `0.0.0.0:47823`. Limit firewall access to intended networks.
 Plain HTTP does not encrypt files or credentials; use it only on a trusted LAN.
 Tailscale encrypts traffic between connected devices. Installing Tailscale and
 configuring its access rules are separate from Send Thing.
+
+Desktop and mobile rediscover paired hosts on the LAN using Bonjour/mDNS
+(`_send-thing._tcp`). Reconnect tries verified LAN routes before saved Tailscale
+or other remote routes, and returns to LAN when it becomes reachable. The host
+refreshes its announcements after interface changes. Discovery requires local
+network access and multicast between devices; guest networks may block it.
+The current implementation discovers IPv4 LAN addresses. A browser cannot scan
+mDNS, but can reconnect through previously learned addresses.
+
+Existing pairings can rediscover an updated host even if their saved address is
+already stale. New addresses must answer a fresh challenge using the paired
+credential's hash before credentials are sent. This prevents
+accidental connections to a different host; it does not encrypt plain HTTP or
+protect it against an active network intermediary. HTTPS pairings never downgrade
+to HTTP. Mobile needs a native rebuild to include the discovery module.
 
 An authenticated WebSocket signals changes; reconnecting refreshes history over
 HTTP. Clients fetch history in pages of 50 messages. Drafts survive restarts;

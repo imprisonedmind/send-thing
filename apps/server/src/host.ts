@@ -30,6 +30,7 @@ import {
   ProfileInput,
   SendInput,
   SocketAuth,
+  SocketPing,
   UploadInput,
   safeFilename,
 } from "@send-thing/contracts";
@@ -38,6 +39,8 @@ import { ApiError } from "./errors.ts";
 import { parseByteRange } from "./range.ts";
 import { firstLink } from "@send-thing/contracts/links";
 import { LinkPreviews } from "./link-preview.ts";
+import { HostChallenge } from "@send-thing/contracts/network";
+import { advertiseHost, hostAddresses } from "./discovery.ts";
 
 export interface HostOptions {
   directory: string;
@@ -182,6 +185,17 @@ async function startOwnedHost(options: HostOptions) {
     const method = request.method;
     const bearer = request.headers.authorization?.replace(/^Bearer /, "");
 
+    if (method === "POST" && url.pathname === "/api/host-proof") {
+      const input = decode(HostChallenge, await json(request));
+      reply(
+        response,
+        "deviceId" in input
+          ? store.hostProof(input.deviceId, input.nonce)
+          : store.hostProof(input.credentialId, input.nonce, "credential"),
+      );
+      return;
+    }
+
     if (method === "POST" && url.pathname === "/api/pair") {
       const address = request.socket.remoteAddress ?? "unknown";
       const now = Date.now();
@@ -200,7 +214,11 @@ async function startOwnedHost(options: HostOptions) {
       const input = decode(PairInput, await json(request));
       const existing = bearer ? store.authenticate(bearer) : undefined;
       const result = store.pair(input.invite, input.profile, existing);
-      reply(response, existing ? { ...result, token: bearer } : result);
+      reply(response, {
+        ...result,
+        token: existing ? bearer : result.token,
+        session: { ...result.session, endpoints: endpoints() },
+      });
       for (const group of result.session.groups) broadcast(group.id);
       return;
     }
@@ -209,7 +227,7 @@ async function startOwnedHost(options: HostOptions) {
       if (!bearer) throw new ApiError(401, "Pair this device with the host.");
       const device = store.authenticate(bearer);
       if (method === "GET" && url.pathname === "/api/session") {
-        reply(response, store.session(device));
+        reply(response, { ...store.session(device), endpoints: endpoints() });
         return;
       }
       if (method === "PUT" && url.pathname === "/api/profile") {
@@ -502,6 +520,14 @@ async function startOwnedHost(options: HostOptions) {
         const auth = decode(SocketAuth, JSON.parse(data.toString()));
         clients.set(socket, store.authenticate(auth.token));
         socket.send(JSON.stringify({ type: "ready" }));
+        socket.on("message", (data) => {
+          try {
+            const ping = decode(SocketPing, JSON.parse(data.toString()));
+            socket.send(JSON.stringify({ type: "pong", nonce: ping.nonce }));
+          } catch {
+            socket.close(1008, "Invalid message");
+          }
+        });
       } catch {
         socket.close(4003, "Authentication failed");
       }
@@ -540,12 +566,21 @@ async function startOwnedHost(options: HostOptions) {
   const address = server.address();
   if (!address || typeof address === "string")
     throw new Error("Host did not bind a TCP port.");
+  const endpoints = () =>
+    hostAddresses(options.bind, address.port, options.tls ? "https" : "http");
+  const stopAdvertising = advertiseHost(
+    store.hostId,
+    options.bind,
+    address.port,
+    options.tls ? "https" : "http",
+  );
   return {
     hostId: store.hostId,
     token,
     port: address.port,
     protocol: options.tls ? "https" : "http",
     async close() {
+      stopAdvertising();
       clearInterval(heartbeat);
       linkPreviews.close();
       for (const socket of sockets.clients) socket.terminate();

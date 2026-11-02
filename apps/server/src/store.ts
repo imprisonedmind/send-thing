@@ -1,5 +1,9 @@
 import { DatabaseSync, type SQLInputValue } from "node:sqlite";
-import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { createHash, createHmac, randomBytes, randomUUID } from "node:crypto";
+import {
+  credentialIdMessage,
+  proofMessage,
+} from "@send-thing/contracts/network";
 import * as Schema from "effect/Schema";
 import {
   Attachment,
@@ -77,6 +81,33 @@ export class Store {
       .get(hash(token));
     if (!row) throw new ApiError(401, "Pair this device with the host again.");
     return String(row.id);
+  }
+
+  hostProof(
+    identity: string,
+    nonce: string,
+    kind: "device" | "credential" = "device",
+  ) {
+    const row =
+      kind === "credential"
+        ? this.db
+            .prepare("SELECT tokenHash FROM devices")
+            .all()
+            .find(
+              (device) =>
+                hash(credentialIdMessage(String(device.tokenHash))) ===
+                identity,
+            )
+        : this.db
+            .prepare("SELECT tokenHash FROM devices WHERE id = ?")
+            .get(identity);
+    if (!row) throw new ApiError(404, "Unknown paired device.");
+    return {
+      hostId: this.hostId,
+      proof: createHmac("sha256", Buffer.from(String(row.tokenHash), "hex"))
+        .update(proofMessage(this.hostId, identity, nonce))
+        .digest("hex"),
+    };
   }
 
   device(id: string): Device {

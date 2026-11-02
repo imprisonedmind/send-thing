@@ -20,8 +20,14 @@ export async function loadConnections(): Promise<Connection[]> {
     ? [...Schema.decodeUnknownSync(Connections)(JSON.parse(json))]
     : [];
 }
-export async function saveConnections(connections: Connection[]) {
-  await SecureStore.setItemAsync(connectionKey, JSON.stringify(connections));
+let connectionWrite = Promise.resolve();
+export function saveConnections(connections: Connection[]) {
+  const encoded = JSON.stringify(connections);
+  const next = connectionWrite
+    .catch(() => {})
+    .then(() => SecureStore.setItemAsync(connectionKey, encoded));
+  connectionWrite = next;
+  return next;
 }
 
 const Selection = Schema.Struct({ hostId: Id, groupId: Schema.NullOr(Id) });

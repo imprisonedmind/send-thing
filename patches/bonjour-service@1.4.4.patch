@@ -1,0 +1,11 @@
+diff --git a/dist/lib/mdns-server.js b/dist/lib/mdns-server.js
+--- a/dist/lib/mdns-server.js
++++ b/dist/lib/mdns-server.js
+@@ -15,6 +15,7 @@ class Server {
+         this.mdns.setMaxListeners(0);
+         this.mdns.on('query', this.respondToQuery.bind(this));
+         this.errorCallback = errorCallback !== null && errorCallback !== void 0 ? errorCallback : function (err) { throw err; };
++        this.mdns.on('error', this.errorCallback);
+     }
+     register(records) {
+         const shouldRegister = (record) => {
