@@ -25,6 +25,10 @@ macOS production distribution should use a Developer ID certificate and notarize
 stapled DMGs. Unsigned builds must be identified as such in release notes;
 macOS may block opening them. Windows unsigned installers may also show warnings.
 
+For an unsigned Mac release, use `pnpm package:macos:unsigned`. It builds both
+architectures and applies an ad-hoc signature to preserve bundle integrity.
+This does not establish a developer identity or satisfy notarization.
+
 Collect these artifacts in one directory:
 
 - `send-thing-macos-arm64.dmg` and `send-thing-macos-x64.dmg`

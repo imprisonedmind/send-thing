@@ -23,6 +23,7 @@
     "prepare:release": "node scripts/prepare-release.mjs",
     "signing:android": "node scripts/init-android-signing.mjs",
     "package:android": "node scripts/build-android.mjs",
+    "package:macos:unsigned": "pnpm build:desktop && node scripts/build-macos-unsigned.mjs",
     "package:desktop": "pnpm build:desktop && pnpm --filter @send-thing/desktop package"
   },
   "devDependencies": {
