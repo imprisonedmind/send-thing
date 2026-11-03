@@ -144,10 +144,7 @@ export function parseMetadata(html: string, pageUrl: string) {
   const parser = new Parser(
     {
       onopentag(name, attributes) {
-        if (name === "body") {
-          parser.pause();
-          return;
-        }
+        // Frameworks can stream document metadata after the body has started.
         if (name === "title") inTitle = true;
         if (name !== "meta") return;
         const key = (
