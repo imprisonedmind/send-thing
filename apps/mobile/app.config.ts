@@ -10,12 +10,12 @@ const config: ExpoConfig = {
   name: development ? "Send Thing Dev" : "Send Thing",
   slug: development ? "send-thing-dev" : "send-thing",
   scheme: development ? "sendthing-dev" : "sendthing",
-  version: "0.0.2",
+  version: "0.0.3",
   orientation: "default",
   userInterfaceStyle: "automatic",
   ios: {
     bundleIdentifier: appId,
-    buildNumber: "2",
+    buildNumber: "3",
     supportsTablet: true,
     infoPlist: {
       NSLocalNetworkUsageDescription:
@@ -29,7 +29,7 @@ const config: ExpoConfig = {
   },
   android: {
     package: appId,
-    versionCode: 2,
+    versionCode: 3,
     icon: "./assets/icon.png",
     adaptiveIcon: {
       foregroundImage: "./assets/icon.png",

@@ -54,6 +54,30 @@ test("Twitter cards and normal document metadata are supported without invented 
   );
 });
 
+test("streamed metadata in the body supplies a link preview", () => {
+  assert.deepEqual(
+    parseMetadata(
+      `<html><head><meta charset="utf-8"></head><body>
+      <main>Page content</main>
+      <script>const example = '<meta property="og:title" content="Not metadata">';</script>
+      <title>Document title</title>
+      <meta property="og:title" content="Streamed title">
+      <meta property="og:description" content="Streamed description">
+      <meta property="og:site_name" content="Example">
+      <meta property="og:image" content="/og.png">
+      </body></html>`,
+      "https://example.com/post",
+    ),
+    {
+      title: "Streamed title",
+      description: "Streamed description",
+      siteName: "Example",
+      imageUrl: "https://example.com/og.png",
+      video: false,
+    },
+  );
+});
+
 test("metadata cannot introduce executable or credential-bearing URLs", () => {
   const result = parseMetadata(
     '<meta property="og:image" content="javascript:alert(1)"><meta property="og:video" content="https://user:pass@example.com/video">',
