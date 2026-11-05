@@ -31,14 +31,18 @@ export function advertiseHost(
   scheme: string,
 ) {
   let bonjour: Bonjour | undefined;
+  let service: Bonjour.Service | undefined;
   let previous = "";
   let failed = false;
   const refresh = () => {
     const addresses = hostAddresses(bind, port, scheme);
     const signature = addresses.slice().sort().join("\n");
-    if (signature === previous && bonjour && !failed) return;
+    if (signature === previous && service?.published && !failed) return;
+    if (bonjour)
+      console.info("[discovery] Refreshing LAN announcement", { failed });
     bonjour?.destroy();
     bonjour = undefined;
+    service = undefined;
     previous = signature;
     failed = false;
     if (!addresses.some((url) => isLanAddress(new URL(url).hostname))) return;
@@ -47,18 +51,22 @@ export function advertiseHost(
         failed = true;
         console.warn("LAN discovery unavailable:", error.message);
       });
-      bonjour
-        .publish({
-          name: `send-thing-${hostId}`,
-          type: DISCOVERY_SERVICE,
-          port,
-          host: `send-thing-${hostId}.local`,
-          disableIPv6: true,
-          txt: { hostId, scheme },
-        })
-        .on("error", (error) =>
-          console.warn("LAN announcement failed:", error.message),
-        );
+      console.info("[discovery] Advertising host", { hostId, addresses });
+      service = bonjour.publish({
+        name: `send-thing-${hostId}`,
+        type: DISCOVERY_SERVICE,
+        port,
+        host: `send-thing-${hostId}.local`,
+        disableIPv6: true,
+        txt: { hostId, scheme },
+      });
+      service.on("up", () =>
+        console.info("[discovery] LAN announcement published", { hostId }),
+      );
+      service.on("error", (error) => {
+        failed = true;
+        console.warn("LAN announcement failed:", error.message);
+      });
     } catch (error) {
       bonjour?.destroy();
       bonjour = undefined;

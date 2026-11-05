@@ -34,6 +34,13 @@ For an unsigned Mac release, use `pnpm package:macos:unsigned`. It builds both
 architectures and applies an ad-hoc signature to preserve bundle integrity.
 This does not establish a developer identity or satisfy notarization.
 
+All macOS packaging runs `apps/desktop/after-pack.cjs` before signing. It assigns
+fresh Mach-O UUIDs to the app and helper executables so Local Network permission
+cannot be confused with another app using the same Electron binaries. Do not
+patch UUIDs after signing or reuse an old packaged bundle for a new release.
+After upgrading from a build with shared UUIDs, allow Send Thing in macOS
+**System Settings → Privacy & Security → Local Network** if prompted.
+
 Collect these artifacts in one directory:
 
 - `send-thing-macos-arm64.dmg` and `send-thing-macos-x64.dmg`

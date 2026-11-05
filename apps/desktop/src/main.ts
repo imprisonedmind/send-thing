@@ -30,6 +30,7 @@ import * as Schema from "effect/Schema";
 import { containsPoint, popoverBounds, POPOVER_SIZE } from "./popover.ts";
 import { installMediaViewer } from "./media.ts";
 import { copyNativeFile } from "./clipboard.ts";
+import { installLogging } from "./logging.ts";
 import { discoverHost, hostAddresses } from "@send-thing/server/discovery";
 import {
   Attachment,
@@ -63,6 +64,7 @@ let dialogOpen = false;
 let contextMenuOpen = false;
 let credentials: Connection[] = [];
 let localHostId: string;
+let log: ReturnType<typeof installLogging>;
 const prepared = new Map<string, string>();
 const preparing = new Map<string, Promise<string>>();
 const HostReady = Schema.Struct({
@@ -308,8 +310,18 @@ async function start() {
           process.env.SEND_THING_PORT ?? (development ? "47824" : "47823"),
         SEND_THING_WEB_ROOT: dev ? "" : join(process.resourcesPath, "web"),
       },
-      stdio: ["ignore", "inherit", "inherit", "ipc"],
+      stdio: ["ignore", "pipe", "pipe", "ipc"],
     });
+    for (const [stream, target, source] of [
+      [backend.stdout, process.stdout, "host"],
+      [backend.stderr, process.stderr, "host:error"],
+    ] as const) {
+      stream?.setEncoding("utf8");
+      stream?.on("data", (message: string) => {
+        log(source, message);
+        target.write(message);
+      });
+    }
     const timeout = setTimeout(() => {
       backend?.kill();
       reject(new Error("Host startup timed out."));
@@ -618,7 +630,18 @@ else {
   process.once("SIGTERM", () => app.quit());
   void app
     .whenReady()
-    .then(start)
+    .then(() => {
+      app.setAppLogsPath();
+      log = installLogging(app.getPath("logs"));
+      console.info(`Starting ${appName} ${app.getVersion()}`);
+      app.on("web-contents-created", (_event, contents) => {
+        contents.on("console-message", (event) => {
+          if (event.message.startsWith("[send-thing:connection]"))
+            log("connection", event.message);
+        });
+      });
+      return start();
+    })
     .catch((error) => {
       console.error("[desktop] Startup failed:", error);
       dialog.showErrorBox(`Could not start ${appName}`, String(error));
