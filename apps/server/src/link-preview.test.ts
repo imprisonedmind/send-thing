@@ -1,6 +1,110 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseMetadata, previewUrl, publicAddress } from "./link-preview.ts";
+import { mkdtemp, rm } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import {
+  LinkPreviews,
+  parseMetadata,
+  previewUrl,
+  publicAddress,
+} from "./link-preview.ts";
+import { Store, newToken } from "./store.ts";
+
+test("metadata and image bytes survive expiry, memory eviction and host restart without refetching", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "send-thing-previews-"));
+  const filename = join(directory, "state.sqlite");
+  const host = { name: "Host", token: newToken() };
+  let store = new Store(filename, host);
+  const fetch = t.mock.fn(async (url: string) => ({
+    url,
+    mime: url.endsWith(".png") ? "image/png" : "text/html",
+    body: Buffer.from(
+      url.endsWith(".png")
+        ? "thumbnail bytes"
+        : '<meta property="og:title" content="Saved title"><meta property="og:image" content="/og.png">',
+    ),
+  }));
+  let previews = new LinkPreviews(store, fetch);
+  try {
+    const url = "https://example.com/post";
+    const first = await previews.get(url);
+    assert.equal(first?.title, "Saved title");
+    assert.equal(
+      first?.image,
+      `data:image/png;base64,${Buffer.from("thumbnail bytes").toString("base64")}`,
+    );
+    assert.equal(fetch.mock.callCount(), 2);
+
+    const later = Date.now() + 24 * 60 * 60_000;
+    t.mock.method(Date, "now", () => later);
+    assert.deepEqual(await previews.get(url), first);
+    assert.equal(fetch.mock.callCount(), 2);
+
+    for (let index = 0; index < 129; index++)
+      await previews.get(`https://example.com/post/${index}`);
+    const calls = fetch.mock.callCount();
+    assert.deepEqual(await previews.get(url), first);
+    assert.equal(fetch.mock.callCount(), calls);
+
+    previews.close();
+    store.close();
+    store = new Store(filename, host);
+    previews = new LinkPreviews(store, fetch);
+    assert.deepEqual(await previews.get(url), first);
+    assert.equal(fetch.mock.callCount(), calls);
+  } finally {
+    previews.close();
+    store.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+for (const failure of ["page", "image"])
+  test(`failed ${failure} fetches are retried instead of permanently cached`, async (t) => {
+    const store = new Store(":memory:", { name: "Host", token: newToken() });
+    let failing = true;
+    const fetch = t.mock.fn(async (url: string) => {
+      const image = url.endsWith(".png");
+      if (failing && (failure === "page" || image))
+        throw new Error("Temporarily unavailable");
+      return {
+        url,
+        mime: image ? "image/png" : "text/html",
+        body: Buffer.from(
+          image
+            ? "thumbnail bytes"
+            : '<title>Saved title</title><meta property="og:image" content="/og.png">',
+        ),
+      };
+    });
+    const previews = new LinkPreviews(store, fetch);
+    try {
+      const url = "https://example.com/post";
+      const first = await previews.get(url);
+      if (failure === "page") assert.equal(first, null);
+      else {
+        assert.equal(first?.title, "Saved title");
+        assert.equal(first?.image, null);
+      }
+      assert.equal(store.linkPreview(url), null);
+      const calls = fetch.mock.callCount();
+      failing = false;
+      assert.deepEqual(await previews.get(url), first);
+      assert.equal(fetch.mock.callCount(), calls);
+
+      const later = Date.now() + 5 * 60_000 + 1;
+      t.mock.method(Date, "now", () => later);
+      const recovered = await previews.get(url);
+      assert.equal(recovered?.title, "Saved title");
+      assert.ok(recovered?.image);
+      assert.equal(fetch.mock.callCount(), calls + 2);
+      assert.deepEqual(store.linkPreview(url), recovered);
+    } finally {
+      previews.close();
+      store.close();
+    }
+  });
 
 test("Open Graph wins over document fallbacks, decodes entities and resolves relative media", () => {
   const result = parseMetadata(

@@ -149,7 +149,7 @@ async function startOwnedHost(options: HostOptions) {
   const sockets = new WebSocketServer({ noServer: true, maxPayload: 4096 });
   const clients = new Map<WebSocket, string>();
   const activeUploads = new Set<string>();
-  const linkPreviews = new LinkPreviews();
+  const linkPreviews = new LinkPreviews(store);
   const pairAttempts = new Map<string, { count: number; until: number }>();
   const broadcast = (groupId: string) => {
     for (const [socket, deviceId] of clients) {

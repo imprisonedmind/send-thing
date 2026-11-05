@@ -4,6 +4,7 @@ import { request as httpsRequest } from "node:https";
 import { Parser } from "htmlparser2";
 import ipaddr from "ipaddr.js";
 import type { LinkPreview } from "@send-thing/contracts";
+import type { Store } from "./store.ts";
 
 // Previews must never turn the host into a proxy for its LAN, tailnet or loopback.
 export function publicAddress(address: string): boolean {
@@ -211,6 +212,8 @@ export function parseMetadata(html: string, pageUrl: string) {
 }
 
 export class LinkPreviews {
+  private readonly store: Store;
+  private readonly fetch: typeof fetchPublic;
   private cache = new Map<
     string,
     { value: LinkPreview | null; until: number; size: number }
@@ -221,6 +224,11 @@ export class LinkPreviews {
   private queue: (() => void)[] = [];
   private abort = new AbortController();
 
+  constructor(store: Store, fetch = fetchPublic) {
+    this.store = store;
+    this.fetch = fetch;
+  }
+
   close() {
     this.abort.abort();
     this.cache.clear();
@@ -228,8 +236,14 @@ export class LinkPreviews {
   }
 
   async get(url: string): Promise<LinkPreview | null> {
+    this.abort.signal.throwIfAborted();
     const existing = this.cache.get(url);
     if (existing && existing.until > Date.now()) return existing.value;
+    const saved = this.store.linkPreview(url);
+    if (saved) {
+      this.remember(url, saved, Infinity);
+      return saved;
+    }
     const pending = this.pending.get(url);
     if (pending) return pending;
     if (this.pending.size >= 100) throw new Error("Too many pending previews.");
@@ -247,13 +261,14 @@ export class LinkPreviews {
       await new Promise<void>((resolve) => this.queue.push(resolve));
     else this.active++;
     let value: LinkPreview | null = null;
+    let imageFailed = false;
     try {
       this.abort.signal.throwIfAborted();
       const signal = AbortSignal.any([
         this.abort.signal,
         AbortSignal.timeout(12_000),
       ]);
-      const page = await fetchPublic(
+      const page = await this.fetch(
         url,
         1024 * 1024,
         /^text\/html$|^application\/xhtml\+xml$/,
@@ -271,7 +286,7 @@ export class LinkPreviews {
         let image: string | null = null;
         if (metadata.imageUrl) {
           try {
-            const photo = await fetchPublic(
+            const photo = await this.fetch(
               metadata.imageUrl,
               2 * 1024 * 1024,
               /^image\/(jpeg|png|webp|gif|avif)$/,
@@ -280,6 +295,7 @@ export class LinkPreviews {
             image = `data:${photo.mime};base64,${photo.body.toString("base64")}`;
           } catch {
             /* Keep the real text metadata when the thumbnail is unavailable. */
+            imageFailed = true;
           }
         }
         value = {
@@ -299,23 +315,29 @@ export class LinkPreviews {
       else this.active--;
     }
     if (this.abort.signal.aborted) return null;
+    // Only complete previews are permanent; a failed thumbnail must remain retryable.
+    let until = Date.now() + 5 * 60_000;
+    if (value && !imageFailed) {
+      this.store.saveLinkPreview(value);
+      until = Infinity;
+    }
+    this.remember(url, value, until);
+    return value;
+  }
+
+  private remember(url: string, value: LinkPreview | null, until: number) {
     const old = this.cache.get(url);
     if (old) {
       this.bytes -= old.size;
       this.cache.delete(url);
     }
     const size = Buffer.byteLength(JSON.stringify(value));
-    this.cache.set(url, {
-      value,
-      size,
-      until: Date.now() + (value ? 60 * 60_000 : 5 * 60_000),
-    });
+    this.cache.set(url, { value, size, until });
     this.bytes += size;
     while (this.bytes > 16 * 1024 * 1024 || this.cache.size > 128) {
       const key = this.cache.keys().next().value!;
       this.bytes -= this.cache.get(key)!.size;
       this.cache.delete(key);
     }
-    return value;
   }
 }
