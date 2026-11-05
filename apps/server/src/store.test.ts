@@ -1,6 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createHash, createHmac, randomUUID } from "node:crypto";
+import { mkdtemp, rm } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import {
   credentialIdMessage,
   proofMessage,
@@ -8,6 +11,43 @@ import {
 import { Store, newToken } from "./store.ts";
 
 const profile = { name: "Phone", kind: "phone", avatar: null } as const;
+
+test("adding persistent previews preserves version 1 host identities and history", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "send-thing-store-"));
+  const filename = join(directory, "state.sqlite");
+  const host = { name: "Host", token: newToken() };
+  let store = new Store(filename, host);
+  try {
+    const group = store.createGroup(store.hostId, "Personal");
+    const message = store.send(store.hostId, group.id, {
+      id: randomUUID(),
+      text: "https://example.com/post",
+      attachmentIds: [],
+    });
+    const hostId = store.hostId;
+    // Recreate the schema that shipped before persistent previews.
+    store.db.exec("DROP TABLE link_previews; PRAGMA user_version = 1;");
+    store.close();
+
+    store = new Store(filename, host);
+    assert.equal(store.hostId, hostId);
+    assert.equal(store.authenticate(host.token), hostId);
+    assert.deepEqual(store.history(hostId, group.id).messages, [message]);
+    const preview = {
+      url: message.text,
+      title: "Example",
+      description: "",
+      siteName: "",
+      image: null,
+      video: false,
+    };
+    store.saveLinkPreview(preview);
+    assert.deepEqual(store.linkPreview(message.text), preview);
+  } finally {
+    store.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
 
 test("host proofs are bound to the paired device and fresh challenge without exposing its credential", () => {
   const token = newToken();

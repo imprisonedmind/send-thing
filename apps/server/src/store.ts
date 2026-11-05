@@ -9,6 +9,7 @@ import {
   Attachment,
   Device,
   Group,
+  LinkPreview,
   type ProfileInput,
   type SendInput,
   type Session,
@@ -32,7 +33,7 @@ export class Store {
     const version = Number(
       this.db.prepare("PRAGMA user_version").get()?.user_version,
     );
-    if (version > 1) {
+    if (version > 2) {
       this.db.close();
       throw new Error("This database requires a newer Send Thing host.");
     }
@@ -47,6 +48,13 @@ export class Store {
       CREATE INDEX messages_group_sequence ON messages(groupId, sequence);
       CREATE TABLE files (id TEXT PRIMARY KEY, groupId TEXT NOT NULL REFERENCES groups(id), ownerId TEXT NOT NULL REFERENCES devices(id), name TEXT NOT NULL, mime TEXT NOT NULL, size INTEGER NOT NULL, complete INTEGER NOT NULL DEFAULT 0, messageId TEXT REFERENCES messages(id));
       PRAGMA user_version = 1;
+      COMMIT;
+    `);
+    if (version < 2)
+      this.db.exec(`
+      BEGIN IMMEDIATE;
+      CREATE TABLE link_previews (url TEXT PRIMARY KEY, value TEXT NOT NULL);
+      PRAGMA user_version = 2;
       COMMIT;
     `);
     const existing = this.db
@@ -285,6 +293,23 @@ export class Store {
       .get(messageId, groupId);
     if (!row) throw new ApiError(404, "Message not found.");
     return String(row.text);
+  }
+
+  linkPreview(url: string): LinkPreview | null {
+    const row = this.db
+      .prepare("SELECT value FROM link_previews WHERE url = ?")
+      .get(url);
+    return row
+      ? Schema.decodeUnknownSync(LinkPreview)(JSON.parse(String(row.value)))
+      : null;
+  }
+
+  saveLinkPreview(value: LinkPreview): void {
+    this.db
+      .prepare(
+        "INSERT OR REPLACE INTO link_previews (url, value) VALUES (?, ?)",
+      )
+      .run(value.url, JSON.stringify(value));
   }
 
   private message(row: Record<string, SQLInputValue>): Message {

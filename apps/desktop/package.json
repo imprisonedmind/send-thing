@@ -1,7 +1,7 @@
 {
   "name": "@send-thing/desktop",
   "private": true,
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Share files, photos and links between your devices",
   "author": "Luke Stephens",
   "homepage": "https://send-thing.lukestephens.co.za",
