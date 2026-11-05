@@ -27,7 +27,7 @@ patchedDependencies:
     hash: 4ba16823bc1b240ccf7f2a9e48a63374e54c40dfa08e94b0b59f37ec351ee4e5
     path: patches/@react-native-masked-view__masked-view@0.3.2.patch
   bonjour-service@1.4.4:
-    hash: 4db4e4c1278e8df1a06571bd220f433ccbe7111b45d6a2193ba785b03e9dbec6
+    hash: 4bda0ff0979d40b1a60b8e26bb1c2aa9cb7814a4780b0f52cf90a884c5c8bbfd
     path: patches/bonjour-service@1.4.4.patch
   expo-sharing@58.0.19:
     hash: dcdc534eeb18eb9fb0919c0ff7da1f7a75076b5b38b57f231cad32bb17c9dda3
@@ -231,7 +231,7 @@ importers:
         version: link:../../packages/contracts
       bonjour-service:
         specifier: ^1.4.4
-        version: 1.4.4(patch_hash=4db4e4c1278e8df1a06571bd220f433ccbe7111b45d6a2193ba785b03e9dbec6)
+        version: 1.4.4(patch_hash=4bda0ff0979d40b1a60b8e26bb1c2aa9cb7814a4780b0f52cf90a884c5c8bbfd)
       effect:
         specifier: 'catalog:'
         version: 4.0.5
@@ -8640,7 +8640,7 @@ snapshots:
 
   bluebird@3.7.2: {}
 
-  bonjour-service@1.4.4(patch_hash=4db4e4c1278e8df1a06571bd220f433ccbe7111b45d6a2193ba785b03e9dbec6):
+  bonjour-service@1.4.4(patch_hash=4bda0ff0979d40b1a60b8e26bb1c2aa9cb7814a4780b0f52cf90a884c5c8bbfd):
     dependencies:
       fast-deep-equal: 3.1.3
       multicast-dns: 7.2.5

@@ -24,6 +24,12 @@ network access and multicast between devices; guest networks may block it.
 The current implementation discovers IPv4 LAN addresses. A browser cannot scan
 mDNS, but can reconnect through previously learned addresses.
 
+Packaged desktop logs include host startup, discovery and connection events.
+On macOS, they are in `~/Library/Logs/Send Thing/send-thing.log`; other platforms
+use the application's user-data `logs` directory. Logs rotate at 2 MB and retain
+one previous file (`send-thing.log.1`). If discovery fails after updating macOS or
+the app, check Send Thing's Local Network permission as well as the firewall.
+
 Existing pairings can rediscover an updated host even if their saved address is
 already stale. New addresses must answer a fresh challenge using the paired
 credential's hash before credentials are sent. This prevents

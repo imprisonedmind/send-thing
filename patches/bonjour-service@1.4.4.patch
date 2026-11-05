@@ -1,11 +1,74 @@
 diff --git a/dist/lib/mdns-server.js b/dist/lib/mdns-server.js
 --- a/dist/lib/mdns-server.js
 +++ b/dist/lib/mdns-server.js
-@@ -15,6 +15,7 @@ class Server {
+@@ -15,6 +15,11 @@ class Server {
          this.mdns.setMaxListeners(0);
          this.mdns.on('query', this.respondToQuery.bind(this));
          this.errorCallback = errorCallback !== null && errorCallback !== void 0 ? errorCallback : function (err) { throw err; };
 +        this.mdns.on('error', this.errorCallback);
++        this.mdns.on('warning', (error) => {
++            if (['EACCES', 'EPERM', 'EADDRNOTAVAIL', 'ENETDOWN', 'ENETUNREACH', 'EHOSTUNREACH'].includes(error.code))
++                this.errorCallback(error);
++        });
      }
      register(records) {
          const shouldRegister = (record) => {
+diff --git a/dist/lib/registry.js b/dist/lib/registry.js
+--- a/dist/lib/registry.js
++++ b/dist/lib/registry.js
+@@ -25,11 +25,16 @@ class Registry {
+             if (!(service instanceof service_1.default))
+                 return;
+             if (probe) {
+-                registry.probe(registry.server.mdns, service, (exists) => {
++                registry.probe(registry.server.mdns, service, (exists, error) => {
++                    if (error) {
++                        service.activated = false;
++                        service.emit('error', error);
++                        return;
++                    }
+                     if (exists) {
+                         if (service.stop !== undefined)
+                             service.stop();
+-                        console.log(new Error('Service name is already in use on the network'));
++                        service.emit('error', new Error('Service name is already in use on the network'));
+                         return;
+                     }
+                     registry.announce(registry.server, service);
+@@ -79,7 +84,9 @@ class Registry {
+         const send = () => {
+             if (!service.activated || service.destroyed)
+                 return;
+-            mdns.query(service.fqdn, 'ANY', function () {
++            mdns.query(service.fqdn, 'ANY', function (error) {
++                if (error)
++                    return done(false, error);
+                 sent = true;
+                 timer = setTimeout(++retries < 3 ? send : done, 250);
+                 timer.unref();
+@@ -97,10 +104,10 @@ class Registry {
+         const matchRR = (rr) => {
+             return (0, dns_equal_1.default)(rr.name, service.fqdn);
+         };
+-        const done = (exists) => {
++        const done = (exists, error) => {
+             mdns.removeListener('response', onresponse);
+             clearTimeout(timer);
+-            callback(!!exists);
++            callback(!!exists, error);
+         };
+         mdns.on('response', onresponse);
+         setTimeout(send, Math.random() * 250);
+@@ -113,7 +120,11 @@ class Registry {
+         const broadcast = () => {
+             if (!service.activated || service.destroyed)
+                 return;
+-            server.mdns.respond(packet, function () {
++            server.mdns.respond(packet, function (error) {
++                if (error) {
++                    service.emit('error', error);
++                    return;
++                }
+                 if (!service.published) {
+                     service.activated = true;
+                     service.published = true;
